@@ -15,9 +15,9 @@ def run(command, working_directory="/")
   output = []
   Open3.popen2e(command, :chdir=>"#{working_directory }") do |stdin, stdout_err, wait_thr|
     while line = stdout_err.gets
+      puts line
       output << line
     end
-    output.each {|line| puts line}
     raise "Error while running #{command}" if not wait_thr.value.success?
     return wait_thr.value.success?, output
   end
