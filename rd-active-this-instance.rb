@@ -24,7 +24,7 @@ def run(command, working_directory="/")
 end
 
 def higher_subdomain(domain)
-  domain.split(',')[0]
+  return domain.split(',')[0]
 end
 
 def update_rundeck_master
@@ -35,7 +35,7 @@ end
 
 def update_cname(cname, master)
 
-	puts "Updating #{cname} to point to #{master}"
+	puts "Update #{cname} in order to point to #{master}"
 	exit_code, output = run("forge quarry rrs find --where_name #{higher_subdomain(cname)}")
 
   if output =~ /^*.rr_id: (\d+)/
@@ -49,8 +49,8 @@ def update_cname(cname, master)
 end
 
 def update_rundeck_standby(target)
-  exit_code, output = run("run -j common/rundeck-chef-client -p ADMIN --follow -- -hostname #{target}")
-  puts output
+  #exit_code, output = run("run -j common/rundeck-chef-client -p ADMIN --follow -- -hostname #{target}")
+  #puts output
 end
 
 
