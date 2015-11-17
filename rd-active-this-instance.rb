@@ -1,3 +1,5 @@
+#!/usr/bin/env ruby
+
 require 'open3'
 require 'json'
 require 'chef'
