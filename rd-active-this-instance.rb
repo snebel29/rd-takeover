@@ -35,7 +35,7 @@ end
 
 def update_cname(cname, master)
 
-	puts "Updating #{cname} to point to #{domain}"
+	puts "Updating #{cname} to point to #{master}"
 	exit_code, output = run("forge quarry rrs find --where_name #{higher_subdomain(cname)}")
 
   if output =~ /^*.rr_id: (\d+)/
