@@ -24,33 +24,39 @@ def run(command, working_directory="/")
 end
 
 def higher_subdomain(domain)
-  return domain.split(',')[0]
+  domain.split('.')[0]
 end
 
 def update_rundeck_master
   # Assumming the current instance is the master
-  #command = "/usr/bin/sudo /usr/bin/chef-client"
-  #exit_code, output = run(command)
+  command = "/usr/bin/sudo /usr/bin/chef-client"
+  exit_code, output = run(command)
 end
 
 def update_cname(cname, master)
 
 	puts "Update #{cname} in order to point to #{master}"
 	exit_code, output = run("forge quarry rrs find --where_name #{higher_subdomain(cname)}")
+  rr_id = nil  
 
-  if output =~ /^*.rr_id: (\d+)/
-    rr_id = $1
-    exit_code, output = run("forge quarry rrs update --key #{rr_id} --value #{higher_subdomain(master)}")
-    exit_code, output = run("forge quarry sync zones")
-  else
-    puts "Failed trying to capture rr_id from woodstove"
+  output.each do |line|
+    if line =~ /^*.rr_id: (\d+)/
+      rr_id = $1
+      exit_code, output = run("forge quarry rrs update --key #{rr_id} --value #{higher_subdomain(master)}")
+      exit_code, output = run("forge quarry sync zones")
+    end
   end
-  
+  if rr_id.nil?
+      puts "regexp result: #{output =~ /^*.rr_id: (\d+)/}"
+      puts "Failed trying to capture rr_id from woodstove"
+      exit(1)
+  end
+
 end
 
 def update_rundeck_standby(target)
-  #exit_code, output = run("run -j common/rundeck-chef-client -p ADMIN --follow -- -hostname #{target}")
-  #puts output
+  exit_code, output = run("run -j common/rundeck-chef-client -p ADMIN --follow -- -hostname #{target}")
+  puts output
 end
 
 
@@ -75,6 +81,7 @@ searcher = Chef::Search::Query.new.search(:environment, "name:#{environment_name
 
       else
 	      puts "This instance is already the master in chef_environment [#{environment_name}] so nothing to do"
+	      exit(0)
       end
       
     end
