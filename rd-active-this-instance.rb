@@ -6,6 +6,7 @@ require 'chef'
 require 'socket'
 require 'chef/search/query'
 
+#TODO: For some reason ohai attributes seems missing when running the process directly, workaround is not using them in the cookbook
 hostname = Socket.gethostname
 environment_name = 'rundeck'
 Chef::Config.from_file("#{ENV['HOME']}/.chef/knife.rb")
