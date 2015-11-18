@@ -78,7 +78,7 @@ searcher = Chef::Search::Query.new.search(:environment, "name:#{environment_name
 	
 	      update_rundeck_master
 	      update_cname(cluster['cname'], cluster['master'])
-	      update_rundeck_standby(cluster['standby']) if __FILE__ != 'rd-failover'
+	      update_rundeck_standby(cluster['standby']) if File.basename(__FILE__) != 'rd-failover'
 
       else
 	      puts "This instance is already the master in chef_environment [#{environment_name}] so nothing to do"
