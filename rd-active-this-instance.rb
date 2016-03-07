@@ -5,10 +5,10 @@ require 'json'
 require 'chef'
 require 'socket'
 require 'chef/search/query'
+require 'net/ssh'
 
 #TODO: For some reason ohai attributes seems missing when running the process directly, workaround is not using them in the cookbook
 hostname = Socket.gethostname
-environment_name = 'rundeck'
 Chef::Config.from_file("#{ENV['HOME']}/.chef/knife.rb")
 
 def run(command, working_directory="/")
@@ -36,9 +36,9 @@ end
 
 def update_cname(cname, master)
 
-	puts "Update #{cname} in order to point to #{master}"
-	exit_code, output = run("forge quarry rrs find --where_name #{higher_subdomain(cname)}")
-  rr_id = nil  
+        puts "Update #{cname} in order to point to #{master}"
+        exit_code, output = run("forge quarry rrs find --where_name #{higher_subdomain(cname)}")
+  rr_id = nil
 
   output.each do |line|
     if line =~ /^*.rr_id: (\d+)/
@@ -56,15 +56,25 @@ def update_cname(cname, master)
 end
 
 def update_rundeck_standby(target)
-  exit_code, output = run("run -j common/rundeck-chef-client -p ADMIN --follow -- -hostname #{target}")
-  puts output
+  begin
+    ssh = Net::SSH.start(target, ENV['USER'])
+    output = ssh.exec!("sudo chef-client")
+    ssh.close
+    puts output
+  rescue
+    puts "Unable to connect to #{target}"
+    exit(2)
+  end
 end
 
+# MAIN
+chef_environment = nil
+Chef::Search::Query.new.search(:node, "name:#{hostname}") {|node| chef_environment = node.chef_environment}
 
-searcher = Chef::Search::Query.new.search(:environment, "name:#{environment_name}") do |env|
+Chef::Search::Query.new.search(:environment, "name:#{chef_environment}") do |env|
   env.default_attributes['clusters'].each do |cluster|
     if cluster.has_value?(hostname)
-      master = cluster['master'] 
+      master = cluster['master']
       standby = cluster['standby']
 
       if master != hostname
@@ -73,18 +83,20 @@ searcher = Chef::Search::Query.new.search(:environment, "name:#{environment_name
         cluster['standby'] = master
         env.save
 
-	      puts "This is the new environment configuration"
-	      puts JSON.pretty_generate(env.default_attributes)
-	
-	      update_rundeck_master
-	      update_cname(cluster['cname'], cluster['master'])
-	      update_rundeck_standby(cluster['standby']) if File.basename(__FILE__) != 'rd-failover'
+              puts "This is the new environment configuration"
+              puts JSON.pretty_generate(env.default_attributes)
 
-      else
-	      puts "This instance is already the master in chef_environment [#{environment_name}] so nothing to do"
+              update_rundeck_master
+              update_cname(cluster['cname'], cluster['master'])
+              update_rundeck_standby(cluster['standby']) if File.basename(__FILE__) != 'rd-failover'
 	      exit(0)
+      else
+              puts "This instance is already the master in chef_environment [#{chef_environment}] so nothing to do"
+              exit(0)
       end
-      
     end
   end
+  puts "This host [#{hostname}] is not in the environment [#{node.chef_environment}] configuration"
+  exit(1)
 end
+
